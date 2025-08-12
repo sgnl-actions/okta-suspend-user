@@ -1,7 +1,7 @@
 {
-  "name": "@sgnl/job-template",
+  "name": "@sgnl-actions/okta-suspend-user",
   "version": "1.0.0",
-  "description": "Template for SGNL JavaScript jobs",
+  "description": "Suspend an Okta user account",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

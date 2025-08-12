@@ -1,48 +1,49 @@
-name: job-template
-description: Template for SGNL JavaScript jobs - replace with your job description
+name: okta-suspend-user
+description: Suspend an Okta user account, preventing them from logging in
 
 # Input parameters for web form generation
 inputs:
-  target:
+  userId:
     type: text
-    description: Target resource identifier (e.g., user email, group ID)
+    description: The Okta user ID to suspend
     required: true
     validation:
       min: 1
       max: 100
 
-  action:
+  oktaDomain:
     type: text
-    description: Action to perform on the target resource
+    description: The Okta domain (e.g., example.okta.com)
     required: true
     validation:
       min: 1
-      max: 50
+      max: 100
+      pattern: '^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.okta(\\.com|\\.eu|\\.au|\\.jp)?$'
 
-  options:
-    type: array
-    description: Additional options for the operation
-    required: false
-    item_type: text
-    validation:
-      max: 10
-
-  dry_run:
-    type: boolean
-    description: Preview changes without executing them
-    required: false
-    default: false
+# Required secrets (configured at deployment time)
+secrets:
+  - OKTA_API_TOKEN
 
 # Expected output structure
 outputs:
-  status:
+  userId:
     type: text
-    description: Operation result (success, failed, recovered, etc.)
+    description: The user ID that was suspended
 
-  target:
+  suspended:
+    type: boolean
+    description: Whether the user was successfully suspended
+
+  oktaDomain:
     type: text
-    description: The target resource that was processed
+    description: The Okta domain where the action was performed
 
-  processed_at:
+  suspendedAt:
     type: datetime
-    description: When the operation completed (ISO 8601)
+    description: When the user was suspended (ISO 8601)
+
+# Runtime configuration
+runtime:
+  type: nodejs-22
+  timeout: 30s
+  memory: 128Mi
