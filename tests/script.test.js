@@ -270,14 +270,14 @@ describe('Okta Suspend User Action', () => {
   });
 
   describe('error handler', () => {
-    test('should retry on rate limit (429) and succeed', async () => {
+    test('should re-throw error for framework to handle', async () => {
+      const testError = new Error('Failed to suspend user: HTTP 429');
+      testError.statusCode = 429;
+
       const params = {
         userId: 'user123',
         oktaDomain: 'example.okta.com',
-        error: {
-          message: 'Failed to suspend user: HTTP 429',
-          statusCode: 429
-        }
+        error: testError
       };
 
       const context = {
@@ -286,128 +286,32 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
-      // Mock successful retry
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ status: 'SUSPENDED' })
-      });
-
-      // Mock setTimeout to speed up test
-      jest.useFakeTimers();
-      const resultPromise = script.error(params, context);
-      jest.runAllTimers();
-      const result = await resultPromise;
-      jest.useRealTimers();
-
-      expect(result).toEqual({
-        userId: 'user123',
-        suspended: true,
-        oktaDomain: 'example.okta.com',
-        suspendedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
-        recoveryMethod: 'rate_limit_retry'
-      });
-
-      expect(fetch).toHaveBeenCalledTimes(1);
-    });
-
-    test('should retry on service unavailable (503) and succeed', async () => {
-      const params = {
-        userId: 'user456',
-        oktaDomain: 'test.okta.com',
-        error: {
-          message: 'Service temporarily unavailable',
-          statusCode: 503
-        }
-      };
-
-      const context = {
-        secrets: {
-          OKTA_API_TOKEN: 'test-token'
-        }
-      };
-
-      // Mock successful retry
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ status: 'SUSPENDED' })
-      });
-
-      // Mock setTimeout to speed up test
-      jest.useFakeTimers();
-      const resultPromise = script.error(params, context);
-      jest.runAllTimers();
-      const result = await resultPromise;
-      jest.useRealTimers();
-
-      expect(result).toEqual({
-        userId: 'user456',
-        suspended: true,
-        oktaDomain: 'test.okta.com',
-        suspendedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
-        recoveryMethod: 'service_retry'
-      });
-    });
-
-    test('should throw error when cannot recover', async () => {
-      const params = {
-        userId: 'user789',
-        oktaDomain: 'example.okta.com',
-        error: {
-          message: 'Unauthorized: Invalid API token',
-          statusCode: 401
-        }
-      };
-
-      const context = {
-        secrets: {
-          OKTA_API_TOKEN: 'invalid-token'
-        }
-      };
-
-      await expect(script.error(params, context)).rejects.toThrow(
-        'Unrecoverable error suspending user user789: Unauthorized: Invalid API token'
-      );
-
+      await expect(script.error(params, context)).rejects.toThrow(testError);
       expect(fetch).not.toHaveBeenCalled();
     });
 
-    test('should handle retry failure after rate limit', async () => {
+    test('should log error details', async () => {
+      const consoleSpy = jest.spyOn(console, 'error');
+      const testError = new Error('Service unavailable');
+      testError.statusCode = 503;
+
       const params = {
-        userId: 'user123',
-        oktaDomain: 'example.okta.com',
-        error: {
-          message: 'Rate limited',
-          statusCode: 429
-        }
+        userId: 'user456',
+        oktaDomain: 'test.okta.com',
+        error: testError
       };
 
-      const context = {
-        secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
-        },
-        env: {
-          RATE_LIMIT_BACKOFF_MS: '5000'
-        }
-      };
+      const context = {};
 
-      // Mock failed retry
-      fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 429
-      });
+      try {
+        await script.error(params, context);
+      } catch {
+        // Expected to throw
+      }
 
-      // Mock setTimeout to speed up test
-      jest.useFakeTimers();
-      const errorPromise = script.error(params, context);
-      jest.runAllTimers();
-
-      await expect(errorPromise).rejects.toThrow(
-        'Unrecoverable error suspending user'
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'User suspension failed for user user456: Service unavailable'
       );
-
-      jest.useRealTimers();
     });
   });
 

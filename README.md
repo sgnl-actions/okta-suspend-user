@@ -18,12 +18,9 @@ This SGNL action integrates with Okta's REST API to suspend a user account. When
 
 - `OKTA_API_TOKEN` - Your Okta API token (can be prefixed with "SSWS " or provided without prefix)
 
-### Optional Environment Variables
+### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RATE_LIMIT_BACKOFF_MS` | `30000` | Wait time after rate limit (429) errors |
-| `SERVICE_ERROR_BACKOFF_MS` | `10000` | Wait time after service errors (502/503/504) |
+The SGNL Job Service framework handles timeouts and retries automatically. No environment variables are required for this action.
 
 ### Input Parameters
 
@@ -79,11 +76,11 @@ This SGNL action integrates with Okta's REST API to suspend a user account. When
 
 ## Error Handling
 
-The action includes automatic retry logic for common transient errors:
+The SGNL Job Service framework automatically handles retries for transient errors:
 
-### Retryable Errors
-- **429 Rate Limit**: Waits 30 seconds before retrying
-- **502/503/504 Service Issues**: Waits 10 seconds before retrying
+### Retryable Errors (handled by framework)
+- **429 Rate Limit**: Framework implements exponential backoff
+- **502/503/504 Service Issues**: Framework retries with appropriate delays
 
 ### Non-Retryable Errors
 - **401 Unauthorized**: Invalid API token
@@ -175,7 +172,7 @@ This action uses the following Okta API endpoint:
    - This is typically not an error condition
 
 5. **Rate Limiting**
-   - The action automatically handles rate limits with backoff
+   - The framework automatically handles rate limits with exponential backoff
    - Consider batching operations if suspending many users
 
 ## Version History

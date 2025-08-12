@@ -107,78 +107,19 @@ export default {
   },
 
   /**
-   * Error recovery handler - attempts to recover from retryable errors
+   * Error recovery handler - framework handles retries by default
+   * Only implement if custom recovery logic is needed
    * @param {Object} params - Original params plus error information
    * @param {Object} context - Execution context
    * @returns {Object} Recovery results
    */
-  error: async (params, context) => {
-    const { error, userId, oktaDomain } = params;
-    const statusCode = error.statusCode;
-
+  error: async (params, _context) => {
+    const { error, userId } = params;
     console.error(`User suspension failed for user ${userId}: ${error.message}`);
 
-    // Get configurable backoff times from environment
-    const rateLimitBackoffMs = parseInt(context.env?.RATE_LIMIT_BACKOFF_MS || '30000', 10);
-    const serviceErrorBackoffMs = parseInt(context.env?.SERVICE_ERROR_BACKOFF_MS || '10000', 10);
-
-    // Handle rate limiting (429)
-    if (statusCode === 429 || error.message.includes('429') || error.message.includes('rate limit')) {
-      console.log(`Rate limited by Okta API - waiting ${rateLimitBackoffMs}ms before retry`);
-      await new Promise(resolve => setTimeout(resolve, rateLimitBackoffMs));
-
-      console.log(`Retrying user suspension for user ${userId} after rate limit backoff`);
-
-      // Retry the operation using helper function
-      const retryResponse = await suspendUser(
-        userId,
-        oktaDomain,
-        context.secrets.OKTA_API_TOKEN
-      );
-
-      if (retryResponse.ok) {
-        console.log(`Successfully suspended user ${userId} after retry`);
-
-        return {
-          userId: userId,
-          suspended: true,
-          oktaDomain: oktaDomain,
-          suspendedAt: new Date().toISOString(),
-          recoveryMethod: 'rate_limit_retry'
-        };
-      }
-    }
-
-    // Handle temporary service issues (502, 503, 504)
-    if ([502, 503, 504].includes(statusCode)) {
-      console.log(`Okta service temporarily unavailable - waiting ${serviceErrorBackoffMs}ms before retry`);
-      await new Promise(resolve => setTimeout(resolve, serviceErrorBackoffMs));
-
-      console.log(`Retrying user suspension for user ${userId} after service interruption`);
-
-      // Retry the operation using helper function
-      const retryResponse = await suspendUser(
-        userId,
-        oktaDomain,
-        context.secrets.OKTA_API_TOKEN
-      );
-
-      if (retryResponse.ok) {
-        console.log(`Successfully suspended user ${userId} after service recovery`);
-
-        return {
-          userId: userId,
-          suspended: true,
-          oktaDomain: oktaDomain,
-          suspendedAt: new Date().toISOString(),
-          recoveryMethod: 'service_retry'
-        };
-      }
-    }
-
-    // Cannot recover from this error
-    console.error(`Unable to recover from error for user ${userId}`);
-    throw new Error(`Unrecoverable error suspending user ${userId}: ${error.message}`);
+    // Framework handles retries for transient errors (429, 502, 503, 504)
+    // Just re-throw the error to let the framework handle it
+    throw error;
   },
 
   /**
