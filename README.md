@@ -20,7 +20,7 @@ This SGNL action integrates with Okta's REST API to suspend a user account. When
 
 ### Environment Variables
 
-The SGNL Job Service framework handles timeouts and retries automatically. No environment variables are required for this action.
+The SGNL's CAEP Hub framework handles timeouts and retries automatically. No environment variables are required for this action.
 
 ### Input Parameters
 
@@ -76,7 +76,7 @@ The SGNL Job Service framework handles timeouts and retries automatically. No en
 
 ## Error Handling
 
-The SGNL Job Service framework automatically handles retries for transient errors:
+The SGNL's CAEP Hub framework automatically handles retries for transient errors:
 
 ### Retryable Errors (handled by framework)
 - **429 Rate Limit**: Framework implements exponential backoff
