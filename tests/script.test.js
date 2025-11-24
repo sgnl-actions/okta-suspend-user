@@ -24,7 +24,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token-123'
+          BEARER_AUTH_TOKEN: 'SSWS test-token-123'
         }
       };
 
@@ -76,7 +76,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'token-without-prefix'
+          BEARER_AUTH_TOKEN: 'token-without-prefix'
         }
       };
 
@@ -106,7 +106,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -136,7 +136,7 @@ describe('Okta Suspend User Action', () => {
       };
 
       await expect(script.invoke(params, context)).rejects.toThrow(
-        'Missing required secret: OKTA_API_TOKEN'
+        'Missing required secret: BEARER_AUTH_TOKEN'
       );
 
       expect(fetch).not.toHaveBeenCalled();
@@ -149,7 +149,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -167,7 +167,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -186,7 +186,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -215,7 +215,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -247,7 +247,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -282,7 +282,7 @@ describe('Okta Suspend User Action', () => {
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
