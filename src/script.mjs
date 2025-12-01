@@ -5,18 +5,20 @@
  * The user remains in the system but cannot authenticate until unsuspended.
  */
 
+import { getBaseUrl, getAuthorizationHeader } from '@sgnl-actions/utils';
+
 /**
  * Helper function to perform user suspension
  * @private
  */
-async function suspendUser(userId, oktaDomain, authToken) {
+async function suspendUser(userId, baseUrl, authHeader) {
   // Safely encode userId to prevent injection
   const encodedUserId = encodeURIComponent(userId);
-  const url = new URL(`/api/v1/users/${encodedUserId}/lifecycle/suspend`, `https://${oktaDomain}`);
 
-  const authHeader = authToken.startsWith('SSWS ') ? authToken : `SSWS ${authToken}`;
+  // Build URL using base URL (already cleaned by getBaseUrl)
+  const url = `${baseUrl}/api/v1/users/${encodedUserId}/lifecycle/suspend`;
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Authorization': authHeader,
@@ -34,13 +36,29 @@ export default {
    * Main execution handler - suspends the specified Okta user
    * @param {Object} params - Job input parameters
    * @param {string} params.userId - The Okta user ID
-   * @param {string} params.oktaDomain - The Okta domain (e.g., example.okta.com)
-   * @param {Object} context - Execution context with env, secrets, outputs
-   * @param {string} context.secrets.BEARER_AUTH_TOKEN - Bearer token for Okta API authentication
+   *
+   * @param {Object} context - Execution context with secrets and environment
+   * @param {string} context.environment.ADDRESS - Okta API base URL
+   *
+   * The configured auth type will determine which of the following environment variables and secrets are available
+   * @param {string} context.secrets.BEARER_AUTH_TOKEN
+   *
+   * @param {string} context.secrets.BASIC_USERNAME
+   * @param {string} context.secrets.BASIC_PASSWORD
+   *
+   * @param {string} context.secrets.OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_AUDIENCE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_SCOPE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL
+   *
+   * @param {string} context.secrets.OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN
+   *
    * @returns {Object} Job results
    */
   invoke: async (params, context) => {
-    const { userId, oktaDomain } = params;
+    const { userId } = params;
 
     console.log(`Starting Okta user suspension for user: ${userId}`);
 
@@ -48,20 +66,24 @@ export default {
     if (!userId || typeof userId !== 'string') {
       throw new Error('Invalid or missing userId parameter');
     }
-    if (!oktaDomain || typeof oktaDomain !== 'string') {
-      throw new Error('Invalid or missing oktaDomain parameter');
-    }
 
-    // Validate Okta API token is present
-    if (!context.secrets?.BEARER_AUTH_TOKEN) {
-      throw new Error('Missing required secret: BEARER_AUTH_TOKEN');
+    // Get base URL using utility function
+    const baseUrl = getBaseUrl(params, context);
+
+    // Get authorization header
+    let authHeader = await getAuthorizationHeader(context);
+
+    // Handle Okta's SSWS token format for Bearer auth mode
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      authHeader = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }
 
     // Make the API request to suspend the user
     const response = await suspendUser(
       userId,
-      oktaDomain,
-      context.secrets.BEARER_AUTH_TOKEN
+      baseUrl,
+      authHeader
     );
 
     // Handle the response
@@ -80,7 +102,7 @@ export default {
       return {
         userId: userId,
         suspended: true,
-        oktaDomain: oktaDomain,
+        address: baseUrl,
         suspendedAt: new Date().toISOString(),
         status: userData.status || 'SUSPENDED'
       };
