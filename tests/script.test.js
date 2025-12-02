@@ -19,12 +19,12 @@ describe('Okta Suspend User Action', () => {
     test('should successfully suspend user with valid inputs', async () => {
       const params = {
         userId: 'user123',
-        oktaDomain: 'example.okta.com'
+        address: 'https://example.okta.com'
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token-123'
+          BEARER_AUTH_TOKEN: 'SSWS test-token-123'
         }
       };
 
@@ -50,7 +50,7 @@ describe('Okta Suspend User Action', () => {
       expect(result).toEqual({
         userId: 'user123',
         suspended: true,
-        oktaDomain: 'example.okta.com',
+        address: 'https://example.okta.com',
         suspendedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
         status: 'SUSPENDED'
       });
@@ -71,12 +71,12 @@ describe('Okta Suspend User Action', () => {
     test('should add SSWS prefix to token if missing', async () => {
       const params = {
         userId: 'user456',
-        oktaDomain: 'test.okta.com'
+        address: 'https://test.okta.com'
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'token-without-prefix'
+          BEARER_AUTH_TOKEN: 'token-without-prefix'
         }
       };
 
@@ -101,12 +101,12 @@ describe('Okta Suspend User Action', () => {
     test('should encode userId to prevent injection', async () => {
       const params = {
         userId: 'user@test.com/../../admin',
-        oktaDomain: 'example.okta.com'
+        address: 'https://example.okta.com'
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -128,7 +128,7 @@ describe('Okta Suspend User Action', () => {
     test('should throw error when API token is missing', async () => {
       const params = {
         userId: 'user789',
-        oktaDomain: 'example.okta.com'
+        address: 'https://example.okta.com'
       };
 
       const context = {
@@ -136,7 +136,7 @@ describe('Okta Suspend User Action', () => {
       };
 
       await expect(script.invoke(params, context)).rejects.toThrow(
-        'Missing required secret: OKTA_API_TOKEN'
+        'No authentication configured'
       );
 
       expect(fetch).not.toHaveBeenCalled();
@@ -144,12 +144,12 @@ describe('Okta Suspend User Action', () => {
 
     test('should throw error when userId is missing', async () => {
       const params = {
-        oktaDomain: 'example.okta.com'
+        address: 'https://example.okta.com'
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -160,19 +160,19 @@ describe('Okta Suspend User Action', () => {
       expect(fetch).not.toHaveBeenCalled();
     });
 
-    test('should throw error when oktaDomain is missing', async () => {
+    test('should throw error when address is missing', async () => {
       const params = {
         userId: 'user123'
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
       await expect(script.invoke(params, context)).rejects.toThrow(
-        'Invalid or missing oktaDomain parameter'
+        'No URL specified. Provide address parameter or ADDRESS environment variable'
       );
 
       expect(fetch).not.toHaveBeenCalled();
@@ -181,12 +181,12 @@ describe('Okta Suspend User Action', () => {
     test('should handle API error responses', async () => {
       const params = {
         userId: 'invalid-user',
-        oktaDomain: 'example.okta.com'
+        address: 'https://example.okta.com'
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -210,12 +210,12 @@ describe('Okta Suspend User Action', () => {
     test('should handle response without JSON body', async () => {
       const params = {
         userId: 'user123',
-        oktaDomain: 'example.okta.com'
+        address: 'https://example.okta.com'
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -233,7 +233,7 @@ describe('Okta Suspend User Action', () => {
       expect(result).toEqual({
         userId: 'user123',
         suspended: true,
-        oktaDomain: 'example.okta.com',
+        address: 'https://example.okta.com',
         suspendedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
         status: 'SUSPENDED'
       });
@@ -242,12 +242,12 @@ describe('Okta Suspend User Action', () => {
     test('should handle already suspended user (400 error)', async () => {
       const params = {
         userId: 'suspended-user',
-        oktaDomain: 'example.okta.com'
+        address: 'https://example.okta.com'
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -276,13 +276,13 @@ describe('Okta Suspend User Action', () => {
 
       const params = {
         userId: 'user123',
-        oktaDomain: 'example.okta.com',
+        address: 'https://example.okta.com',
         error: testError
       };
 
       const context = {
         secrets: {
-          OKTA_API_TOKEN: 'SSWS test-token'
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
         }
       };
 
@@ -297,7 +297,7 @@ describe('Okta Suspend User Action', () => {
 
       const params = {
         userId: 'user456',
-        oktaDomain: 'test.okta.com',
+        address: 'https://test.okta.com',
         error: testError
       };
 

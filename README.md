@@ -4,40 +4,67 @@ Suspend an Okta user account, preventing them from logging in. The user remains 
 
 ## Overview
 
-This SGNL action integrates with Okta's REST API to suspend a user account. When executed, the user's status changes to SUSPENDED and they are immediately prevented from logging into any Okta-protected applications.
+This SGNL action integrates with Okta to suspend a user account. When executed, the user will be unable to log in to any Okta applications until their account is unsuspended.
 
 ## Prerequisites
 
-- Okta API Token with appropriate permissions to manage users
-- Okta domain (e.g., `example.okta.com`)
-- Target user's Okta user ID
+- Okta instance
+- API authentication credentials (supports 4 auth methods - see Configuration below)
+- Okta API access with permissions to manage user lifecycle
 
 ## Configuration
 
-### Required Secrets
+### Authentication
 
-- `OKTA_API_TOKEN` - Your Okta API token (can be prefixed with "SSWS " or provided without prefix)
+This action supports four authentication methods. Configure one of the following:
 
-### Environment Variables
+#### Option 1: Bearer Token (Okta API Token)
+| Secret | Description |
+|--------|-------------|
+| `BEARER_AUTH_TOKEN` | Okta API token (SSWS format) |
 
-The SGNL's CAEP Hub framework handles timeouts and retries automatically. No environment variables are required for this action.
+#### Option 2: Basic Authentication
+| Secret | Description |
+|--------|-------------|
+| `BASIC_USERNAME` | Username for Okta authentication |
+| `BASIC_PASSWORD` | Password for Okta authentication |
+
+#### Option 3: OAuth2 Client Credentials
+| Secret/Environment | Description |
+|-------------------|-------------|
+| `OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET` | OAuth2 client secret |
+| `OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID` | OAuth2 client ID |
+| `OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL` | OAuth2 token endpoint URL |
+| `OAUTH2_CLIENT_CREDENTIALS_SCOPE` | OAuth2 scope (optional) |
+| `OAUTH2_CLIENT_CREDENTIALS_AUDIENCE` | OAuth2 audience (optional) |
+| `OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE` | OAuth2 auth style (optional) |
+
+#### Option 4: OAuth2 Authorization Code
+| Secret | Description |
+|--------|-------------|
+| `OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN` | OAuth2 access token |
+
+### Required Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ADDRESS` | Okta API base URL | `https://dev-12345.okta.com` |
 
 ### Input Parameters
 
 | Parameter | Type | Required | Description | Example |
 |-----------|------|----------|-------------|---------|
-| `userId` | string | Yes | The Okta user ID to suspend | `00u1a2b3c4d5e6f7g8h9` |
-| `oktaDomain` | string | Yes | Your Okta domain | `example.okta.com` |
+| `userId` | string | Yes | The Okta user ID | `00u1234567890abcdef` |
 
 ### Output Structure
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `userId` | string | The user ID that was suspended |
-| `suspended` | boolean | Whether the user was successfully suspended |
-| `oktaDomain` | string | The Okta domain where the action was performed |
-| `suspendedAt` | datetime | When the user was suspended (ISO 8601) |
-| `status` | string | The user's status after suspension (typically "SUSPENDED") |
+| `suspended` | boolean | Whether the suspension was successful |
+| `address` | string | The Okta API base URL used |
+| `suspendedAt` | datetime | When the operation completed (ISO 8601) |
+| `status` | string | User status after suspension (SUSPENDED) |
 
 ## Usage Example
 
@@ -53,10 +80,10 @@ The SGNL's CAEP Hub framework handles timeouts and retries automatically. No env
     "type": "nodejs"
   },
   "script_inputs": {
-    "userId": "00u1a2b3c4d5e6f7g8h9",
-    "oktaDomain": "example.okta.com"
+    "userId": "00u1234567890abcdef"
   },
   "environment": {
+    "ADDRESS": "https://dev-12345.okta.com",
     "LOG_LEVEL": "info"
   }
 }
@@ -66,26 +93,34 @@ The SGNL's CAEP Hub framework handles timeouts and retries automatically. No env
 
 ```json
 {
-  "userId": "00u1a2b3c4d5e6f7g8h9",
+  "userId": "00u1234567890abcdef",
   "suspended": true,
-  "oktaDomain": "example.okta.com",
+  "address": "https://dev-12345.okta.com",
   "suspendedAt": "2024-01-15T10:30:00Z",
   "status": "SUSPENDED"
 }
 ```
 
+## How It Works
+
+The action performs a POST request to the Okta API to suspend the user:
+
+1. **Validate Input**: Ensures userId parameter is provided
+2. **Authenticate**: Uses configured authentication method to get authorization
+3. **Suspend User**: Makes POST request to `/api/v1/users/{userId}/lifecycle/suspend`
+4. **Return Result**: Confirms user was suspended
+
 ## Error Handling
 
-The SGNL's CAEP Hub framework automatically handles retries for transient errors:
+The action includes error handling for common scenarios:
 
-### Retryable Errors (handled by framework)
-- **429 Rate Limit**: Framework implements exponential backoff
-- **502/503/504 Service Issues**: Framework retries with appropriate delays
-
-### Non-Retryable Errors
-- **401 Unauthorized**: Invalid API token
-- **404 Not Found**: User doesn't exist
-- **400 Bad Request**: User is already suspended or invalid request
+### HTTP Status Codes
+- **200 OK**: Successful suspension (expected response)
+- **400 Bad Request**: User already suspended or invalid state transition
+- **401 Unauthorized**: Invalid authentication credentials
+- **403 Forbidden**: Insufficient permissions
+- **404 Not Found**: User not found
+- **429 Rate Limit**: Too many requests
 
 ## Development
 
@@ -99,7 +134,7 @@ npm install
 npm test
 
 # Test locally with mock data
-npm run dev -- --params '{"userId": "test123", "oktaDomain": "dev.okta.com"}'
+npm run dev
 
 # Build for production
 npm run build
@@ -108,12 +143,10 @@ npm run build
 ### Running Tests
 
 The action includes comprehensive unit tests covering:
-- Successful user suspension
-- API token validation
-- Error response handling
-- Retry logic for rate limiting
-- Service interruption recovery
-- URL encoding for security
+- Input validation (userId parameter)
+- Authentication handling (all 4 auth methods)
+- Success scenarios
+- Error handling (API errors, missing credentials, already suspended users)
 
 ```bash
 # Run all tests
@@ -128,61 +161,48 @@ npm run test:coverage
 
 ## Security Considerations
 
-- **API Token Protection**: Never log or expose the Okta API token
-- **Audit Logging**: All user suspensions are logged with timestamps
-- **URL Encoding**: User IDs are properly encoded to prevent injection attacks
-- **Idempotent Operations**: Safe to retry if network issues occur
-
-## Important Notes
-
-### User Impact
-- Suspended users cannot log in to any Okta-protected applications
-- Active sessions are NOT automatically terminated (use okta-revoke-session action for that)
-- Users remain in the system and can be unsuspended later
-- All user data and group memberships are preserved
-
-### Common Use Cases
-- Security incidents requiring immediate access revocation
-- Employee termination workflows
-- Temporary access restrictions during investigations
-- Compliance-driven access management
+- **Credential Protection**: Never log or expose authentication credentials
+- **User Impact**: Suspending a user immediately prevents login
+- **Audit Logging**: All operations are logged with timestamps
+- **Input Validation**: User IDs are validated and URL-encoded
 
 ## Okta API Reference
 
 This action uses the following Okta API endpoint:
-- [Suspend User](https://developer.okta.com/docs/reference/api/users/#suspend-user)
+- [Suspend User](https://developer.okta.com/docs/reference/api/users/#suspend-user) - POST `/api/v1/users/{userId}/lifecycle/suspend`
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"Missing required secret: OKTA_API_TOKEN"**
-   - Ensure the `OKTA_API_TOKEN` secret is configured in your SGNL environment
+1. **"Invalid or missing userId parameter"**
+   - Ensure the `userId` parameter is provided and is a non-empty string
+   - Verify the user ID exists in your Okta instance
 
-2. **"Not found: Resource not found"**
-   - Verify the user ID exists in your Okta organization
-   - Check that the user ID format is correct
+2. **"No authentication configured"**
+   - Ensure you have configured one of the four supported authentication methods
+   - Check that the required secrets/environment variables are set
 
-3. **"Invalid API token"**
-   - Confirm your API token has the necessary permissions
-   - Verify the token hasn't expired
+3. **"Failed to suspend user: HTTP 400"**
+   - User may already be suspended
+   - Check the user's current status in Okta admin console
 
-4. **"User is already suspended"**
-   - The user is already in a suspended state
-   - This is typically not an error condition
+4. **"Failed to suspend user: HTTP 404"**
+   - Verify the user ID is correct
+   - Check that the user exists in Okta
 
-5. **Rate Limiting**
-   - The framework automatically handles rate limits with exponential backoff
-   - Consider batching operations if suspending many users
+5. **"Failed to suspend user: HTTP 403"**
+   - Ensure your API credentials have permission to manage user lifecycle
+   - Check Okta admin console for required permissions
 
 ## Version History
 
 ### v1.0.0
 - Initial release
-- Support for user suspension via Okta API
-- Automatic retry logic for transient errors
-- Comprehensive error handling and logging
-- URL encoding for security
+- Support for suspending users via Okta API
+- Four authentication methods (Bearer, Basic, OAuth2 Client Credentials, OAuth2 Authorization Code)
+- Integration with @sgnl-actions/utils package
+- Comprehensive error handling
 
 ## License
 
