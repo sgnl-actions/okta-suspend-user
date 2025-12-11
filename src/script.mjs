@@ -70,11 +70,6 @@ export default {
 
     console.log(`Starting Okta user suspension for user: ${userId}`);
 
-    // Validate inputs
-    if (!userId || typeof userId !== 'string') {
-      throw new Error('Invalid or missing userId parameter');
-    }
-
     // Get base URL using utility function
     const baseUrl = getBaseURL(resolvedParams, context);
 
