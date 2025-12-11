@@ -36,6 +36,7 @@ export default {
    * Main execution handler - suspends the specified Okta user
    * @param {Object} params - Job input parameters
    * @param {string} params.userId - The Okta user ID
+   * @param {string} params.address - Full URL to Okta API (defaults to ADDRESS environment variable)
    *
    * @param {Object} context - Execution context with secrets and environment
    * @param {string} context.environment.ADDRESS - Okta API base URL
@@ -69,11 +70,6 @@ export default {
     const { userId } = resolvedParams;
 
     console.log(`Starting Okta user suspension for user: ${userId}`);
-
-    // Validate inputs
-    if (!userId || typeof userId !== 'string') {
-      throw new Error('Invalid or missing userId parameter');
-    }
 
     // Get base URL using utility function
     const baseUrl = getBaseURL(resolvedParams, context);
