@@ -77,8 +77,8 @@ export default {
     // Get authorization header
     let authHeader = await getAuthorizationHeader(context);
 
-    // Handle Okta's SSWS token format for Bearer auth mode
-    if (authHeader.startsWith('Bearer ')) {
+    // Handle Okta's SSWS token format - only for Bearer token auth mode
+    if (context.secrets.BEARER_AUTH_TOKEN && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       authHeader = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }

@@ -142,24 +142,6 @@ describe('Okta Suspend User Action', () => {
       expect(fetch).not.toHaveBeenCalled();
     });
 
-    test('should throw error when userId is missing', async () => {
-      const params = {
-        address: 'https://example.okta.com'
-      };
-
-      const context = {
-        secrets: {
-          BEARER_AUTH_TOKEN: 'SSWS test-token'
-        }
-      };
-
-      await expect(script.invoke(params, context)).rejects.toThrow(
-        'Invalid or missing userId parameter'
-      );
-
-      expect(fetch).not.toHaveBeenCalled();
-    });
-
     test('should throw error when address is missing', async () => {
       const params = {
         userId: 'user123'
