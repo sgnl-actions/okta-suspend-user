@@ -289,6 +289,7 @@ var script = {
 
     // Check if user is already suspended
     if (userData.status === USER_STATUS.SUSPENDED) {
+      console.log("User is already suspended.");
       return {
         userId,
         suspended: true,
