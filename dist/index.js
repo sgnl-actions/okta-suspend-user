@@ -9,6 +9,11 @@
  */
 
 /**
+ * User-Agent header value for all SGNL CAEP Hub requests.
+ */
+const SGNL_USER_AGENT = 'SGNL-CAEP-Hub/2.0';
+
+/**
  * Get OAuth2 access token using client credentials flow
  * @param {Object} config - OAuth2 configuration
  * @param {string} config.tokenUrl - Token endpoint URL
@@ -39,7 +44,8 @@ async function getClientCredentialsToken(config) {
 
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'User-Agent': SGNL_USER_AGENT
   };
 
   if (authStyle === 'InParams') {
@@ -158,6 +164,21 @@ function getBaseURL(params, context) {
 }
 
 /**
+ * Create full headers object with Authorization and common headers
+ * @param {Object} context - Execution context with env and secrets
+ * @returns {Promise<Object>} Headers object with Authorization, Accept, Content-Type
+ */
+async function createAuthHeaders(context) {
+  const authHeader = await getAuthorizationHeader(context);
+  return {
+    'Authorization': authHeader,
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'User-Agent': SGNL_USER_AGENT
+  };
+}
+
+/**
  * Okta Suspend User Action
  *
  * Suspends an Okta user account, preventing them from logging in.
@@ -169,7 +190,7 @@ function getBaseURL(params, context) {
  * Helper function to perform user suspension
  * @private
  */
-async function suspendUser(userId, baseUrl, authHeader) {
+async function suspendUser(userId, baseUrl, headers) {
   // Safely encode userId to prevent injection
   const encodedUserId = encodeURIComponent(userId);
 
@@ -178,11 +199,7 @@ async function suspendUser(userId, baseUrl, authHeader) {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
+    headers
   });
 
   return response;
@@ -224,20 +241,20 @@ var script = {
     // Get base URL using utility function
     const baseUrl = getBaseURL(params, context);
 
-    // Get authorization header
-    let authHeader = await getAuthorizationHeader(context);
+    // Get headers using utility function
+    let headers = await createAuthHeaders(context);
 
     // Handle Okta's SSWS token format - only for Bearer token auth mode
-    if (context.secrets.BEARER_AUTH_TOKEN && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      authHeader = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
+    if (context.secrets.BEARER_AUTH_TOKEN && headers['Authorization'].startsWith('Bearer ')) {
+      const token = headers['Authorization'].substring(7);
+      headers['Authorization'] = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }
 
     // Make the API request to suspend the user
     const response = await suspendUser(
       userId,
       baseUrl,
-      authHeader
+      headers
     );
 
     // Handle the response

@@ -5,13 +5,13 @@
  * The user remains in the system but cannot authenticate until unsuspended.
  */
 
-import { getBaseURL, getAuthorizationHeader} from '@sgnl-actions/utils';
+import { getBaseURL, createAuthHeaders} from '@sgnl-actions/utils';
 
 /**
  * Helper function to perform user suspension
  * @private
  */
-async function suspendUser(userId, baseUrl, authHeader) {
+async function suspendUser(userId, baseUrl, headers) {
   // Safely encode userId to prevent injection
   const encodedUserId = encodeURIComponent(userId);
 
@@ -20,11 +20,7 @@ async function suspendUser(userId, baseUrl, authHeader) {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
+    headers
   });
 
   return response;
@@ -66,20 +62,20 @@ export default {
     // Get base URL using utility function
     const baseUrl = getBaseURL(params, context);
 
-    // Get authorization header
-    let authHeader = await getAuthorizationHeader(context);
+    // Get headers using utility function
+    let headers = await createAuthHeaders(context);
 
     // Handle Okta's SSWS token format - only for Bearer token auth mode
-    if (context.secrets.BEARER_AUTH_TOKEN && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      authHeader = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
+    if (context.secrets.BEARER_AUTH_TOKEN && headers['Authorization'].startsWith('Bearer ')) {
+      const token = headers['Authorization'].substring(7);
+      headers['Authorization'] = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }
 
     // Make the API request to suspend the user
     const response = await suspendUser(
       userId,
       baseUrl,
-      authHeader
+      headers
     );
 
     // Handle the response
