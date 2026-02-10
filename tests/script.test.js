@@ -28,8 +28,19 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
-      // Mock successful API response (200 OK with user data)
-      const mockUserData = {
+      // Mock GET user response - user is ACTIVE
+      const mockGetUserData = {
+        id: 'user123',
+        status: 'ACTIVE',
+        profile: {
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john.doe@example.com'
+        }
+      };
+
+      // Mock POST suspend response
+      const mockSuspendUserData = {
         id: 'user123',
         status: 'SUSPENDED',
         profile: {
@@ -39,10 +50,18 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
+      // First call: GET user
       fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockUserData
+        json: async () => mockGetUserData
+      });
+
+      // Second call: POST suspend
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockSuspendUserData
       });
 
       const result = await script.invoke(params, context);
@@ -55,7 +74,20 @@ describe('Okta Suspend User Action', () => {
         status: 'SUSPENDED'
       });
 
-      expect(fetch).toHaveBeenCalledWith(
+      // Should have called GET first
+      expect(fetch).toHaveBeenNthCalledWith(1,
+        'https://example.okta.com/api/v1/users/user123',
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': 'SSWS test-token-123',
+            'Accept': 'application/json'
+          }
+        }
+      );
+
+      // Then called POST suspend
+      expect(fetch).toHaveBeenNthCalledWith(2,
         'https://example.okta.com/api/v1/users/user123/lifecycle/suspend',
         {
           method: 'POST',
@@ -80,6 +112,14 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
+      // Mock GET user - ACTIVE
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'ACTIVE' })
+      });
+
+      // Mock POST suspend
       fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -110,6 +150,14 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
+      // Mock GET user - ACTIVE
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'ACTIVE' })
+      });
+
+      // Mock POST suspend
       fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -118,8 +166,14 @@ describe('Okta Suspend User Action', () => {
 
       await script.invoke(params, context);
 
-      // Check that the URL is properly encoded
-      expect(fetch).toHaveBeenCalledWith(
+      // Check that the GET URL is properly encoded
+      expect(fetch).toHaveBeenNthCalledWith(1,
+        'https://example.okta.com/api/v1/users/user%40test.com%2F..%2F..%2Fadmin',
+        expect.any(Object)
+      );
+
+      // Check that the POST URL is properly encoded
+      expect(fetch).toHaveBeenNthCalledWith(2,
         'https://example.okta.com/api/v1/users/user%40test.com%2F..%2F..%2Fadmin/lifecycle/suspend',
         expect.any(Object)
       );
@@ -160,7 +214,7 @@ describe('Okta Suspend User Action', () => {
       expect(fetch).not.toHaveBeenCalled();
     });
 
-    test('should handle API error responses', async () => {
+    test('should handle API error responses when getting user', async () => {
       const params = {
         userId: 'invalid-user',
         address: 'https://example.okta.com'
@@ -172,7 +226,7 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
-      // Mock 404 Not Found response
+      // Mock 404 Not Found response for GET user
       fetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
@@ -185,11 +239,11 @@ describe('Okta Suspend User Action', () => {
       const error = await script.invoke(params, context).catch(e => e);
 
       expect(error).toBeInstanceOf(Error);
-      expect(error.message).toContain('Not found: Resource not found');
+      expect(error.message).toContain('Cannot fetch information about User');
       expect(error.statusCode).toBe(404);
     });
 
-    test('should handle response without JSON body', async () => {
+    test('should handle API error responses when suspending user', async () => {
       const params = {
         userId: 'user123',
         address: 'https://example.okta.com'
@@ -201,7 +255,50 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
-      // Mock success response without JSON body
+      // Mock successful GET user - ACTIVE
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'ACTIVE' })
+      });
+
+      // Mock 403 Forbidden response for POST suspend
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({
+          errorCode: 'E0000006',
+          errorSummary: 'You do not have permission to perform the requested action'
+        })
+      });
+
+      const error = await script.invoke(params, context).catch(e => e);
+
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('You do not have permission');
+      expect(error.statusCode).toBe(403);
+    });
+
+    test('should handle suspend response without JSON body', async () => {
+      const params = {
+        userId: 'user123',
+        address: 'https://example.okta.com'
+      };
+
+      const context = {
+        secrets: {
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
+        }
+      };
+
+      // Mock GET user - ACTIVE
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'ACTIVE' })
+      });
+
+      // Mock success POST suspend response without JSON body
       fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -221,7 +318,7 @@ describe('Okta Suspend User Action', () => {
       });
     });
 
-    test('should handle already suspended user (400 error)', async () => {
+    test('should return early if user is already suspended', async () => {
       const params = {
         userId: 'suspended-user',
         address: 'https://example.okta.com'
@@ -233,21 +330,89 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
-      // Mock 400 Bad Request - user already suspended
+      // Mock GET user - already SUSPENDED
       fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 400,
+        ok: true,
+        status: 200,
         json: async () => ({
-          errorCode: 'E0000001',
-          errorSummary: 'Api validation failed: User is already suspended'
+          status: 'SUSPENDED',
+          statusChanged: '2024-01-15T10:30:00.000Z'
         })
+      });
+
+      const result = await script.invoke(params, context);
+
+      expect(result).toEqual({
+        userId: 'suspended-user',
+        suspended: true,
+        address: 'https://example.okta.com',
+        suspendedAt: '2024-01-15T10:30:00.000Z',
+        status: 'SUSPENDED'
+      });
+
+      // Should only call GET, not POST
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    test('should throw error if user is not ACTIVE', async () => {
+      const params = {
+        userId: 'deprovisioned-user',
+        address: 'https://example.okta.com'
+      };
+
+      const context = {
+        secrets: {
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
+        }
+      };
+
+      // Mock GET user - DEPROVISIONED
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'DEPROVISIONED' })
       });
 
       const error = await script.invoke(params, context).catch(e => e);
 
       expect(error).toBeInstanceOf(Error);
-      expect(error.message).toContain('User is already suspended');
+      expect(error.message).toContain('User must have an ACTIVE status to be suspended');
+      expect(error.message).toContain('DEPROVISIONED');
       expect(error.statusCode).toBe(400);
+
+      // Should only call GET, not POST
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    test('should handle invalid JSON in GET user response', async () => {
+      const params = {
+        userId: 'user123',
+        address: 'https://example.okta.com'
+      };
+
+      const context = {
+        secrets: {
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
+        }
+      };
+
+      // Mock GET user with invalid JSON
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new Error('Unexpected token in JSON');
+        }
+      });
+
+      const error = await script.invoke(params, context).catch(e => e);
+
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Cannot parse user data');
+      expect(error.statusCode).toBe(500);
+
+      // Should only call GET, not POST
+      expect(fetch).toHaveBeenCalledTimes(1);
     });
   });
 
