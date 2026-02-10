@@ -113,47 +113,10 @@ export default {
       authHeader = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }
 
-    const getUserResponse = await getUser(userId, baseUrl, authHeader);
-
-    if (!getUserResponse.ok) {
-      const errorMessage = `Cannot fetch information about User: HTTP ${getUserResponse.status}`;
-      console.error(errorMessage);
-      throw createError(errorMessage, getUserResponse.status);
-    }
-
-    let userData;
-    try {
-      userData = await getUserResponse.json();
-    } catch (err) {
-      const errorMessage = `Cannot parse user data: ${err.message}`;
-      console.error(errorMessage);
-      throw createError(errorMessage, 500);
-    }
-
-    // Check if user is already suspended
-    if (userData.status === USER_STATUS.SUSPENDED) {
-      console.log("User is already suspended.")
-      return {
-        userId,
-        suspended: true,
-        address: baseUrl,
-        suspendedAt: userData.statusChanged || userData.lastUpdated,
-        status: userData.status
-      };
-    }
-
-    // Verify user is in ACTIVE state
-    if (userData.status !== USER_STATUS.ACTIVE) {
-      const errorMessage = `User must have an ACTIVE status to be suspended. User is ${userData.status}`;
-      console.error(errorMessage);
-      throw createError(errorMessage, 400);
-    }
-
-    // Make the API request to suspend the user
     const suspendUserResponse = await suspendUser(userId, baseUrl, authHeader);
-
-    if (!suspendUserResponse.ok) {
-      // Handle error responses
+    console.log(`Receieved a ${suspendUserResponse.status} from Okta when suspending user ${userId}`)
+    if (!suspendUserResponse.ok && suspendUserResponse.status !== 400) {
+       // Handle error responses
       let errorMessage = `Failed to suspend user: HTTP ${suspendUserResponse.status}`;
 
       try {
@@ -170,23 +133,41 @@ export default {
       throw createError(errorMessage, suspendUserResponse.status);
     }
 
-    // Successfully suspended user
-    console.log(`Successfully suspended user ${userId}`);
-
-    // Parse the response to get updated user details
-    let suspendedUserData = {};
-    try {
-      suspendedUserData = await suspendUserResponse.json();
-    } catch {
-      // Response might not have JSON body, use defaults
+    // Get user to confirm status chage or in the case that status could not be updated
+    const getUserResponse = await getUser(userId, baseUrl, authHeader)
+    if (!getUserResponse.ok) {
+      const errorMessage = `Cannot fetch information about User: HTTP ${getUserResponse.status}`;
+      console.error(errorMessage);
+      throw createError(errorMessage, getUserResponse.status);
     }
 
+    let userData;
+    try {
+      userData = await getUserResponse.json();
+    } catch (err) {
+      const errorMessage = `Cannot parse user data: ${err.message}`;
+      console.error(errorMessage);
+      throw createError(errorMessage, 500);
+    }
+
+    console.log(userData)
+
+    // Check if user is already suspended
+    if (userData.status != USER_STATUS.SUSPENDED) {
+
+      const errorMessage = `User ${userId} could not be suspended. User is currently ${userData.status}`
+      console.error(errorMessage);
+      throw createError(errorMessage, 400);
+    }
+
+    // Successfully suspended user
+    console.log(`Fetched user info. User ${userId} is currently SUSPENDED`);
     return {
       userId,
       suspended: true,
       address: baseUrl,
-      suspendedAt: new Date().toISOString(),
-      status: suspendedUserData.status || USER_STATUS.SUSPENDED
+      suspendedAt: userData.statusChanged || userData.lastUpdated,
+      status: userData.status
     };
   },
 
