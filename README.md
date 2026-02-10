@@ -116,8 +116,9 @@ The action performs a POST request to the Okta API to suspend the user:
 The action includes error handling for common scenarios:
 
 ### HTTP Status Codes
+
 - **200 OK**: Successful suspension (expected response)
-- **400 Bad Request**: User already suspended or invalid state transition
+- **400 Bad Request**: Invalid state transition
 - **401 Unauthorized**: Invalid authentication credentials
 - **403 Forbidden**: Insufficient permissions
 - **404 Not Found**: User not found
@@ -144,10 +145,11 @@ npm run build
 ### Running Tests
 
 The action includes comprehensive unit tests covering:
+
 - Input validation (userId parameter)
 - Authentication handling (all 4 auth methods)
 - Success scenarios
-- Error handling (API errors, missing credentials, already suspended users)
+- Error handling (API errors, missing credentials, improper user status to be suspended)
 
 ```bash
 # Run all tests
@@ -185,8 +187,7 @@ This action uses the following Okta API endpoint:
    - Check that the required secrets/environment variables are set
 
 3. **"Failed to suspend user: HTTP 400"**
-   - User may already be suspended
-   - Check the user's current status in Okta admin console
+   - Check the user's current status in Okta admin console. User must be ACTIVE to be suspended.
 
 4. **"Failed to suspend user: HTTP 404"**
    - Verify the user ID is correct
