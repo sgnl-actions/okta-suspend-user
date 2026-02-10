@@ -160,8 +160,9 @@ function getBaseURL(params, context) {
 /**
  * Okta Suspend User Action
  *
- * Suspends an Okta user account, preventing them from logging in.
+ * Suspends an Okta user account using Okta's User Lifecycle API, preventing them from logging in.
  * The user remains in the system but cannot authenticate until unsuspended.
+ * See Okta's documentation for more details. https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserLifecycle/#tag/UserLifecycle/operation/suspendUser
  */
 
 
@@ -294,7 +295,7 @@ var script = {
         userId,
         suspended: true,
         address: baseUrl,
-        suspendedAt: userData.statusChanged || new Date().toISOString(),
+        suspendedAt: userData.statusChanged || userData.lastUpdated,
         status: userData.status
       };
     }
