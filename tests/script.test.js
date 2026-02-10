@@ -414,6 +414,42 @@ describe('Okta Suspend User Action', () => {
       // Should only call GET, not POST
       expect(fetch).toHaveBeenCalledTimes(1);
     });
+
+    test('should handle suspended user with null statusChanged', async () => {
+      const params = {
+        userId: 'suspended-user',
+        address: 'https://example.okta.com'
+      };
+
+      const context = {
+        secrets: {
+          BEARER_AUTH_TOKEN: 'SSWS test-token'
+        }
+      };
+
+      // Mock GET user - SUSPENDED with null statusChanged
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: 'SUSPENDED',
+          statusChanged: null
+        })
+      });
+
+      const result = await script.invoke(params, context);
+
+      expect(result).toEqual({
+        userId: 'suspended-user',
+        suspended: true,
+        address: 'https://example.okta.com',
+        suspendedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        status: 'SUSPENDED'
+      });
+
+      // Should only call GET, not POST
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('error handler', () => {

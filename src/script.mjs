@@ -120,9 +120,6 @@ export default {
       throw createError(errorMessage, getUserResponse.status);
     }
 
-    // Parse the response to get user details
-    console.log(`Successfully fetched user ${userId}`);
-
     let userData;
     try {
       userData = await getUserResponse.json();
@@ -138,7 +135,7 @@ export default {
         userId,
         suspended: true,
         address: baseUrl,
-        suspendedAt: userData.statusChanged,
+        suspendedAt: userData.statusChanged || new Date().toISOString(),
         status: userData.status
       };
     }
