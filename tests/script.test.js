@@ -433,7 +433,8 @@ describe('Okta Suspend User Action', () => {
         status: 200,
         json: async () => ({
           status: 'SUSPENDED',
-          statusChanged: null
+          statusChanged: null,
+          lastUpdated: '2024-01-15T10:30:00.000Z'
         })
       });
 
@@ -443,7 +444,7 @@ describe('Okta Suspend User Action', () => {
         userId: 'suspended-user',
         suspended: true,
         address: 'https://example.okta.com',
-        suspendedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        suspendedAt: '2024-01-15T10:30:00.000Z',
         status: 'SUSPENDED'
       });
 
