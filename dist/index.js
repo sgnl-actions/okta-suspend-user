@@ -165,6 +165,12 @@ function getBaseURL(params, context) {
  */
 
 
+// Okta user status constants
+const USER_STATUS = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED'
+};
+
 /**
  * Helper function to perform user suspension
  * @private
@@ -186,6 +192,38 @@ async function suspendUser(userId, baseUrl, authHeader) {
   });
 
   return response;
+}
+
+/**
+ * Helper function to get user details
+ * @private
+ */
+async function getUser(userId, baseUrl, authHeader) {
+  // Safely encode userId to prevent injection
+  const encodedUserId = encodeURIComponent(userId);
+
+  // Build URL using base URL (already cleaned by getBaseUrl)
+  const url = `${baseUrl}/api/v1/users/${encodedUserId}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': authHeader,
+      'Accept': 'application/json',
+    }
+  });
+
+  return response;
+}
+
+/**
+ * Helper function to create an error with a status code
+ * @private
+ */
+function createError(message, statusCode) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
 }
 
 var script = {
@@ -216,7 +254,6 @@ var script = {
    * @returns {Object} Job results
    */
   invoke: async (params, context) => {
-
     const { userId } = params;
 
     console.log(`Starting Okta user suspension for user: ${userId}`);
@@ -233,54 +270,80 @@ var script = {
       authHeader = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }
 
-    // Make the API request to suspend the user
-    const response = await suspendUser(
-      userId,
-      baseUrl,
-      authHeader
-    );
+    const getUserResponse = await getUser(userId, baseUrl, authHeader);
 
-    // Handle the response
-    if (response.ok) {
-      // 200 OK is the expected success response
-      console.log(`Successfully suspended user ${userId}`);
+    if (!getUserResponse.ok) {
+      const errorMessage = `Cannot fetch information about User: HTTP ${getUserResponse.status}`;
+      console.error(errorMessage);
+      throw createError(errorMessage, getUserResponse.status);
+    }
 
-      // Parse the response to get user details
-      let userData = {};
-      try {
-        userData = await response.json();
-      } catch {
-        // Response might not have JSON body
-      }
+    let userData;
+    try {
+      userData = await getUserResponse.json();
+    } catch (err) {
+      const errorMessage = `Cannot parse user data: ${err.message}`;
+      console.error(errorMessage);
+      throw createError(errorMessage, 500);
+    }
 
+    // Check if user is already suspended
+    if (userData.status === USER_STATUS.SUSPENDED) {
       return {
-        userId: userId,
+        userId,
         suspended: true,
         address: baseUrl,
-        suspendedAt: new Date().toISOString(),
-        status: userData.status || 'SUSPENDED'
+        suspendedAt: userData.statusChanged || new Date().toISOString(),
+        status: userData.status
       };
     }
 
-    // Handle error responses
-    const statusCode = response.status;
-    let errorMessage = `Failed to suspend user: HTTP ${statusCode}`;
-
-    try {
-      const errorBody = await response.json();
-      if (errorBody.errorSummary) {
-        errorMessage = `Failed to suspend user: ${errorBody.errorSummary}`;
-      }
-      console.error('Okta API error response:', errorBody);
-    } catch {
-      // Response might not be JSON
-      console.error('Failed to parse error response');
+    // Verify user is in ACTIVE state
+    if (userData.status !== USER_STATUS.ACTIVE) {
+      const errorMessage = `User must have an ACTIVE status to be suspended. User is ${userData.status}`;
+      console.error(errorMessage);
+      throw createError(errorMessage, 400);
     }
 
-    // Throw error with status code for proper error handling
-    const error = new Error(errorMessage);
-    error.statusCode = statusCode;
-    throw error;
+    // Make the API request to suspend the user
+    const suspendUserResponse = await suspendUser(userId, baseUrl, authHeader);
+
+    if (!suspendUserResponse.ok) {
+      // Handle error responses
+      let errorMessage = `Failed to suspend user: HTTP ${suspendUserResponse.status}`;
+
+      try {
+        const errorBody = await suspendUserResponse.json();
+        if (errorBody.errorSummary) {
+          errorMessage = `Failed to suspend user: ${errorBody.errorSummary}`;
+        }
+        console.error('Okta API error response:', errorBody);
+      } catch {
+        // Response might not be JSON
+        console.error('Failed to parse error response');
+      }
+
+      throw createError(errorMessage, suspendUserResponse.status);
+    }
+
+    // Successfully suspended user
+    console.log(`Successfully suspended user ${userId}`);
+
+    // Parse the response to get updated user details
+    let suspendedUserData = {};
+    try {
+      suspendedUserData = await suspendUserResponse.json();
+    } catch {
+      // Response might not have JSON body, use defaults
+    }
+
+    return {
+      userId,
+      suspended: true,
+      address: baseUrl,
+      suspendedAt: new Date().toISOString(),
+      status: suspendedUserData.status || USER_STATUS.SUSPENDED
+    };
   },
 
   /**
