@@ -307,8 +307,6 @@ var script = {
       throw createError(errorMessage, 500);
     }
 
-    console.log(userData);
-
     // Check if user is already suspended
     if (userData.status != USER_STATUS.SUSPENDED) {
 
