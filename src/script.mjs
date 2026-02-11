@@ -10,7 +10,6 @@ import { getBaseURL, createAuthHeaders } from '@sgnl-actions/utils';
 
 // Okta user status constants
 const USER_STATUS = {
-  ACTIVE: 'ACTIVE',
   SUSPENDED: 'SUSPENDED'
 };
 
