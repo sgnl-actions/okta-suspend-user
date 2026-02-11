@@ -106,7 +106,7 @@ export default {
       headers['Authorization'] = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }
 
-    const suspendUserResponse = await suspendUser(userId, baseUrl, authHeader);
+    const suspendUserResponse = await suspendUser(userId, baseUrl, headers);
     console.log(`Receieved a ${suspendUserResponse.status} from Okta when suspending user ${userId}`)
     if (!suspendUserResponse.ok && suspendUserResponse.status !== 400) {
        // Handle error responses
@@ -127,7 +127,7 @@ export default {
     }
 
     // Get user to confirm status chage or in the case that status could not be updated
-    const getUserResponse = await getUser(userId, baseUrl, authHeader)
+    const getUserResponse = await getUser(userId, baseUrl, headers)
     if (!getUserResponse.ok) {
       const errorMessage = `Cannot fetch information about User: HTTP ${getUserResponse.status}`;
       console.error(errorMessage);

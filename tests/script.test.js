@@ -97,7 +97,9 @@ describe('Okta Suspend User Action', () => {
           method: 'GET',
           headers: {
             'Authorization': 'SSWS test-token-123',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            "User-Agent": SGNL_USER_AGENT,
           }
         }
       );

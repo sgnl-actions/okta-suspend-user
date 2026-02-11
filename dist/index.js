@@ -9,6 +9,11 @@
  */
 
 /**
+ * User-Agent header value for all SGNL CAEP Hub requests.
+ */
+const SGNL_USER_AGENT = 'SGNL-CAEP-Hub/2.0';
+
+/**
  * Get OAuth2 access token using client credentials flow
  * @param {Object} config - OAuth2 configuration
  * @param {string} config.tokenUrl - Token endpoint URL
@@ -39,7 +44,8 @@ async function getClientCredentialsToken(config) {
 
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'User-Agent': SGNL_USER_AGENT
   };
 
   if (authStyle === 'InParams') {
@@ -167,7 +173,8 @@ async function createAuthHeaders(context) {
   return {
     'Authorization': authHeader,
     'Accept': 'application/json',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'User-Agent': SGNL_USER_AGENT
   };
 }
 
@@ -277,7 +284,7 @@ var script = {
       headers['Authorization'] = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }
 
-    const suspendUserResponse = await suspendUser(userId, baseUrl, authHeader);
+    const suspendUserResponse = await suspendUser(userId, baseUrl, headers);
     console.log(`Receieved a ${suspendUserResponse.status} from Okta when suspending user ${userId}`);
     if (!suspendUserResponse.ok && suspendUserResponse.status !== 400) {
        // Handle error responses
@@ -298,7 +305,7 @@ var script = {
     }
 
     // Get user to confirm status chage or in the case that status could not be updated
-    const getUserResponse = await getUser(userId, baseUrl, authHeader);
+    const getUserResponse = await getUser(userId, baseUrl, headers);
     if (!getUserResponse.ok) {
       const errorMessage = `Cannot fetch information about User: HTTP ${getUserResponse.status}`;
       console.error(errorMessage);
