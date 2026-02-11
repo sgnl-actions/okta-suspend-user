@@ -85,7 +85,7 @@ describe('Okta Suspend User Action', () => {
             'Authorization': 'SSWS test-token-123',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            "User-Agent": SGNL_USER_AGENT,
+            'User-Agent': SGNL_USER_AGENT
           }
         }
       );
@@ -99,7 +99,7 @@ describe('Okta Suspend User Action', () => {
             'Authorization': 'SSWS test-token-123',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            "User-Agent": SGNL_USER_AGENT,
+            'User-Agent': SGNL_USER_AGENT
           }
         }
       );
