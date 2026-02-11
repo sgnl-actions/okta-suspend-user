@@ -6,7 +6,7 @@
  * See Okta's documentation for more details. https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserLifecycle/#tag/UserLifecycle/operation/suspendUser
  */
 
-import { getBaseURL, getAuthorizationHeader } from '@sgnl-actions/utils';
+import { getBaseURL, createAuthHeaders } from '@sgnl-actions/utils';
 
 // Okta user status constants
 const USER_STATUS = {
@@ -18,7 +18,7 @@ const USER_STATUS = {
  * Helper function to perform user suspension
  * @private
  */
-async function suspendUser(userId, baseUrl, authHeader) {
+async function suspendUser(userId, baseUrl, headers) {
   // Safely encode userId to prevent injection
   const encodedUserId = encodeURIComponent(userId);
 
@@ -27,11 +27,7 @@ async function suspendUser(userId, baseUrl, authHeader) {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
+    headers: headers
   });
 
   return response;
@@ -41,7 +37,7 @@ async function suspendUser(userId, baseUrl, authHeader) {
  * Helper function to get user details
  * @private
  */
-async function getUser(userId, baseUrl, authHeader) {
+async function getUser(userId, baseUrl, headers) {
   // Safely encode userId to prevent injection
   const encodedUserId = encodeURIComponent(userId);
 
@@ -50,10 +46,7 @@ async function getUser(userId, baseUrl, authHeader) {
 
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      'Authorization': authHeader,
-      'Accept': 'application/json',
-    }
+    headers: headers
   });
 
   return response;
@@ -104,13 +97,13 @@ export default {
     // Get base URL using utility function
     const baseUrl = getBaseURL(params, context);
 
-    // Get authorization header
-    let authHeader = await getAuthorizationHeader(context);
+    // Get headers using utility function
+    let headers = await createAuthHeaders(context);
 
     // Handle Okta's SSWS token format - only for Bearer token auth mode
-    if (context.secrets.BEARER_AUTH_TOKEN && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      authHeader = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
+    if (context.secrets.BEARER_AUTH_TOKEN && headers['Authorization'].startsWith('Bearer ')) {
+      const token = headers['Authorization'].substring(7);
+      headers['Authorization'] = token.startsWith('SSWS ') ? token : `SSWS ${token}`;
     }
 
     const suspendUserResponse = await suspendUser(userId, baseUrl, authHeader);

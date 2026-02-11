@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import script from '../src/script.mjs';
+import { SGNL_USER_AGENT } from '@sgnl-actions/utils';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -83,7 +84,8 @@ describe('Okta Suspend User Action', () => {
           headers: {
             'Authorization': 'SSWS test-token-123',
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            "User-Agent": SGNL_USER_AGENT,
           }
         }
       );
