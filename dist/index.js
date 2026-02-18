@@ -287,7 +287,7 @@ var script = {
     const suspendUserResponse = await suspendUser(userId, baseUrl, headers);
     console.log(`Receieved a ${suspendUserResponse.status} from Okta when suspending user ${userId}`);
     if (!suspendUserResponse.ok && suspendUserResponse.status !== 400) {
-       // Handle error responses
+      // Handle error responses
       let errorMessage = `Failed to suspend user: HTTP ${suspendUserResponse.status}`;
 
       try {

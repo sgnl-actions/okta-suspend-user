@@ -106,9 +106,9 @@ export default {
     }
 
     const suspendUserResponse = await suspendUser(userId, baseUrl, headers);
-    console.log(`Receieved a ${suspendUserResponse.status} from Okta when suspending user ${userId}`)
+    console.log(`Receieved a ${suspendUserResponse.status} from Okta when suspending user ${userId}`);
     if (!suspendUserResponse.ok && suspendUserResponse.status !== 400) {
-       // Handle error responses
+      // Handle error responses
       let errorMessage = `Failed to suspend user: HTTP ${suspendUserResponse.status}`;
 
       try {
@@ -126,7 +126,7 @@ export default {
     }
 
     // Get user to confirm status chage or in the case that status could not be updated
-    const getUserResponse = await getUser(userId, baseUrl, headers)
+    const getUserResponse = await getUser(userId, baseUrl, headers);
     if (!getUserResponse.ok) {
       const errorMessage = `Cannot fetch information about User: HTTP ${getUserResponse.status}`;
       console.error(errorMessage);
@@ -145,7 +145,7 @@ export default {
     // Check if user is already suspended
     if (userData.status != USER_STATUS.SUSPENDED) {
 
-      const errorMessage = `User ${userId} could not be suspended. User is currently ${userData.status}`
+      const errorMessage = `User ${userId} could not be suspended. User is currently ${userData.status}`;
       console.error(errorMessage);
       throw createError(errorMessage, 400);
     }
