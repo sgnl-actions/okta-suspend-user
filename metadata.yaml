@@ -38,6 +38,10 @@ outputs:
     type: datetime
     description: When the user was suspended (ISO 8601)
 
+  status:
+    type: text
+    description: The user's status in Okta after suspension
+
 # Runtime configuration
 runtime:
   type: nodejs-22
