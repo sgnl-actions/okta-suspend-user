@@ -29,17 +29,6 @@ describe('Okta Suspend User Action', () => {
         }
       };
 
-      // Mock GET user response - user is ACTIVE
-      const mockGetUserData = {
-        id: 'user123',
-        status: 'ACTIVE',
-        profile: {
-          firstName: 'John',
-          lastName: 'Doe',
-          email: 'john.doe@example.com'
-        }
-      };
-
       // Mock POST suspend response
       const mockSuspendUserData = {
         id: 'user123',
@@ -85,7 +74,7 @@ describe('Okta Suspend User Action', () => {
             'Authorization': 'SSWS test-token-123',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            "User-Agent": SGNL_USER_AGENT,
+            'User-Agent': SGNL_USER_AGENT
           }
         }
       );
@@ -99,7 +88,7 @@ describe('Okta Suspend User Action', () => {
             'Authorization': 'SSWS test-token-123',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            "User-Agent": SGNL_USER_AGENT,
+            'User-Agent': SGNL_USER_AGENT
           }
         }
       );
