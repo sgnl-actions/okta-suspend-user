@@ -8,4 +8,4 @@ on:
 
 jobs:
   ci:
-    uses: sgnl-actions/.github/.github/workflows/ci.yml@d14c70c38b52110c7b251ab76f25248e377f8547 # v1.0.1
+    uses: sgnl-actions/.github/.github/workflows/ci.yml@30e8bcb7c4c7543d249f6fde73eb8b38901899f2 # v1.2.0
