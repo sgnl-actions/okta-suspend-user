@@ -5,7 +5,7 @@
  * The user remains in the system but cannot authenticate until unsuspended.
  */
 
-import { getBaseURL, createAuthHeaders } from '@sgnl-actions/utils';
+import { getBaseURL, createHeaders } from '@sgnl-actions/utils';
 
 // Okta user status constants
 const USER_STATUS = {
@@ -97,7 +97,7 @@ export default {
     const baseUrl = getBaseURL(params, context);
 
     // Get headers using utility function
-    let headers = await createAuthHeaders(context);
+    let headers = await createHeaders(context);
 
     // Handle Okta's SSWS token format - only for Bearer token auth mode
     if (context.secrets.BEARER_AUTH_TOKEN && headers['Authorization'].startsWith('Bearer ')) {
